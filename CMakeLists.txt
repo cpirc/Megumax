@@ -5,6 +5,7 @@ project(megumax)
 ###
 # Find packages
 ###
+find_package(Threads REQUIRED)
 ###
 
 ###
@@ -39,3 +40,4 @@ add_executable(
     megumax
     src/main.cpp
 )
+target_link_libraries(megumax Threads::Threads)
