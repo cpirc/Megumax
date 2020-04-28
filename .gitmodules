@@ -1,0 +1,3 @@
+[submodule "include/libchess"]
+	path = include/libchess
+	url = https://github.com/Mk-Chan/libchess
