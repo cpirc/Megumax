@@ -39,5 +39,8 @@ endif ()
 add_executable(
     megumax
     src/main.cpp
+    src/search.cpp
+    src/search_globals.cpp
+    src/rng_service.cpp
 )
 target_link_libraries(megumax Threads::Threads)
