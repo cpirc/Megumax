@@ -221,8 +221,8 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
 
         if (search_globals.nodes() % 1000 == 0) {
             // clang-format off
-            std::cout << "score"
-                      << " info cp " << root.value()
+            std::cout << "info"
+                      << " score cp " << root.value()
                       << " nodes " << search_globals.nodes()
                       << "\n";
             // clang-format on
