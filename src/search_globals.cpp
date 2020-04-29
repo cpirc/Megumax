@@ -57,7 +57,7 @@ bool SearchGlobals::stop() noexcept {
     if (!go_parameters_) {
         return false;
     }
-    if (!(nodes_ & 4095U) && start_time_) {
+    if (!(nodes_ & 127U) && start_time_) {
         auto time_diff = curr_time().count() - start_time_->count();
 
         auto time = [this]() {
