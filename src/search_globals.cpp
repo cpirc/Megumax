@@ -57,6 +57,9 @@ bool SearchGlobals::stop() noexcept {
     if (!go_parameters_) {
         return false;
     }
+    if (go_parameters_->nodes() && nodes_ >= go_parameters_->nodes().value()) {
+        return true;
+    }
     if (!(nodes_ & 127U) && start_time_) {
         auto time_diff = curr_time().count() - start_time_->count();
 
