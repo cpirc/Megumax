@@ -203,7 +203,9 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     search_globals.stop_flag(false);
     search_globals.side_to_move(pos.side_to_move());
     search_globals.reset_nodes();
-    search_globals.start_time(curr_time());
+    auto start_time = curr_time();
+    auto last_info_time = start_time;
+    search_globals.start_time(start_time);
 
     if (search_globals.stop()) {
         return std::nullopt;
@@ -220,12 +222,19 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
         search_globals.increment_nodes();
 
         if (search_globals.nodes() % 1000 == 0) {
-            // clang-format off
-            std::cout << "info"
-                      << " score cp " << root.value()
-                      << " nodes " << search_globals.nodes()
-                      << "\n";
-            // clang-format on
+            auto now = curr_time();
+            auto time_diff = now - start_time;
+            std::uint64_t time_since_last_info = (now - last_info_time).count();
+            if (time_since_last_info >= 1000) {
+                // clang-format off
+                std::cout << "info"
+                          << " score cp " << root.value()
+                          << " nodes " << search_globals.nodes()
+                          << " time " << int(time_diff.count())
+                          << "\n";
+                // clang-format on
+                last_info_time = now;
+            }
         }
     }
 
