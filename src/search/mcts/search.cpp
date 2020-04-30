@@ -1,5 +1,4 @@
 #include <stack>
-#include <utility>
 
 #include <libchess/UCIService.h>
 
@@ -138,10 +137,10 @@ UCTNode* select(UCTNode* node) {
 }
 
 UCTNode* expand(Position& pos, UCTNode* selected_node) {
-    forward_position(pos, selected_node);
-
     std::vector<UCTNode>& children = selected_node->children();
-    if (children.empty() || selected_node->visited_children() < children.size()) {
+    if (children.empty()) {
+        forward_position(pos, selected_node);
+
         if (selected_node->is_terminal()) {
             return selected_node;
         }
@@ -161,7 +160,9 @@ UCTNode* expand(Position& pos, UCTNode* selected_node) {
 
     unsigned next_child_index = selected_node->visited_children();
     selected_node->increment_visited_children();
-    return &selected_node->children().at(next_child_index);
+    UCTNode* next_child = &selected_node->children().at(next_child_index);
+    forward_position(pos, next_child);
+    return next_child;
 }
 
 int rollout(Position& forwarded_position, UCTNode* expanded_node) {
