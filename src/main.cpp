@@ -1,7 +1,7 @@
 #include "libchess/Position.h"
 #include "libchess/UCIService.h"
 
-#include "search.h"
+#include "search/mcts/search.h"
 
 using libchess::Move;
 using libchess::Position;

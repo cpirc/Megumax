@@ -1,7 +1,7 @@
 #include <stack>
 #include <utility>
 
-#include "libchess/UCIService.h"
+#include <libchess/UCIService.h>
 
 #include "rng_service.h"
 #include "search.h"
