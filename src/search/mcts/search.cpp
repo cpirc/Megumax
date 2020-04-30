@@ -184,7 +184,7 @@ int rollout(Position& forwarded_position, UCTNode* expanded_node) {
                                      : std::nullopt;
     rewind_position(forwarded_position, rollout_ply + expanded_node->depth());
     if (loser) {
-        return side_to_move == *loser ? -1 : 1;
+        return side_to_move == *loser ? 1 : -1;
     }
     return 0;
 }
@@ -225,6 +225,12 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     }
 
     UCTNode root{Move{0}, nullptr};
+    MoveList move_list = pos.legal_move_list();
+    std::vector<UCTNode>& children = root.children();
+    children.reserve(move_list.size());
+    for (Move move : move_list) {
+        children.emplace_back(move, &root);
+    }
 
     while (!search_globals.stop()) {
         UCTNode* selected_node = select(&root);
