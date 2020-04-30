@@ -200,6 +200,18 @@ void backprop(UCTNode* rolled_out_node, int score) {
     backprop(rolled_out_node->parent(), -1 * score);
 }
 
+MoveList get_pv(UCTNode* node, const int max_length = 8) {
+    MoveList move_list;
+    int ply = 0;
+    while (!node->children().empty() && ply < max_length) {
+        const auto idx = select_most_visited_child_index(node->children());
+        move_list.add(node->children().at(idx).move());
+        node = &node->children().at(idx);
+        ply++;
+    }
+    return move_list;
+}
+
 std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     search_globals.stop_flag(false);
     search_globals.side_to_move(pos.side_to_move());
@@ -227,13 +239,18 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
             auto time_diff = now - start_time;
             std::uint64_t time_since_last_info = (now - last_info_time).count();
             if (time_since_last_info >= 1000) {
-                // clang-format off
-                std::cout << "info"
-                          << " score cp " << root.value()
-                          << " nodes " << search_globals.nodes()
-                          << " time " << int(time_diff.count())
-                          << "\n";
-                // clang-format on
+                const auto pv = get_pv(&root);
+                std::cout << "info";
+                std::cout << " score cp " << root.value();
+                std::cout << " nodes " << search_globals.nodes();
+                std::cout << " time " << int(time_diff.count());
+                if (!pv.empty()) {
+                    std::cout << " pv";
+                    for (const auto& move : pv.values()) {
+                        std::cout << " " << move.to_str();
+                    }
+                }
+                std::cout << "\n";
                 last_info_time = now;
             }
         }
