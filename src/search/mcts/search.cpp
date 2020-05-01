@@ -2,6 +2,7 @@
 
 #include <libchess/UCIService.h>
 
+#include "eval.h"
 #include "rng_service.h"
 #include "search.h"
 
@@ -165,28 +166,36 @@ UCTNode* expand(Position& pos, UCTNode* selected_node) {
     return next_child;
 }
 
+double sigmoid(int score, double k = 1.13) noexcept {
+    return 1.0 / (1.0 + std::pow(10.0, -k * score / 400.0));
+}
+
 double rollout(Position& forwarded_position, UCTNode* expanded_node) {
-    RNGService* rng_service = RNGService::singleton();
-    int rollout_ply = 0;
-    MoveList move_list = forwarded_position.legal_move_list();
-    Color side_to_move = forwarded_position.side_to_move();
-    while (!move_list.empty()) {
-        if (forwarded_position.halfmoves() >= 100 || forwarded_position.is_repeat(2)) {
+    double score = 0.5;
+
+    switch (forwarded_position.game_state()) {
+        case Position::GameState::THREEFOLD_REPETITION:
+            score = 0.5;
             break;
-        }
-        std::uint32_t random_move_index = rng_service->rand_uint32(0, move_list.size() - 1);
-        forwarded_position.make_move(move_list.values().at(random_move_index));
-        ++rollout_ply;
-        move_list = forwarded_position.legal_move_list();
+        case Position::GameState::FIFTY_MOVES:
+            score = 0.5;
+            break;
+        case Position::GameState::STALEMATE:
+            score = 0.5;
+            break;
+        case Position::GameState::CHECKMATE:
+            score = 0.0;
+            break;
+        case Position::GameState::IN_PROGRESS:
+            score = sigmoid(0.1 * eval(forwarded_position));
+            break;
+        default:
+            abort();
+            break;
     }
-    std::optional<Color> loser = forwarded_position.in_check()
-                                     ? std::optional{forwarded_position.side_to_move()}
-                                     : std::nullopt;
-    rewind_position(forwarded_position, rollout_ply + expanded_node->depth());
-    if (loser) {
-        return side_to_move == *loser ? 1.0 : 0.0;
-    }
-    return 0.5;
+
+    rewind_position(forwarded_position, expanded_node->depth());
+    return 1.0 - score;
 }
 
 void backprop(UCTNode* rolled_out_node, const double score) {
