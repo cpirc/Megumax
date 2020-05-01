@@ -166,20 +166,16 @@ UCTNode* expand(Position& pos, UCTNode* selected_node) {
     return next_child;
 }
 
-double sigmoid(int score, double k = 1.13) noexcept {
+double sigmoid(double score, double k = 1.13) noexcept {
     return 1.0 / (1.0 + std::pow(10.0, -k * score / 400.0));
 }
 
 double rollout(Position& forwarded_position, UCTNode* expanded_node) {
-    double score = 0.5;
+    double score;
 
     switch (forwarded_position.game_state()) {
         case Position::GameState::THREEFOLD_REPETITION:
-            score = 0.5;
-            break;
         case Position::GameState::FIFTY_MOVES:
-            score = 0.5;
-            break;
         case Position::GameState::STALEMATE:
             score = 0.5;
             break;
@@ -191,7 +187,6 @@ double rollout(Position& forwarded_position, UCTNode* expanded_node) {
             break;
         default:
             abort();
-            break;
     }
 
     rewind_position(forwarded_position, expanded_node->depth());
@@ -253,10 +248,13 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
             std::uint64_t time_since_last_info = (now - last_info_time).count();
             if (time_since_last_info >= 1000) {
                 const auto pv = get_pv(&root);
+                std::uint64_t time_ms = time_diff.count();
+                std::uint64_t nodes = search_globals.nodes();
                 std::cout << "info";
                 std::cout << " score cp " << root.value();
-                std::cout << " nodes " << search_globals.nodes();
-                std::cout << " time " << int(time_diff.count());
+                std::cout << " nodes " << nodes;
+                std::cout << " time " << time_ms;
+                std::cout << " nps " << (time_ms ? (nodes * 1000 / time_ms) : nodes);
                 if (!pv.empty()) {
                     std::cout << " pv";
                     for (const auto& move : pv.values()) {
