@@ -16,7 +16,7 @@ namespace megumax {
 class UCTNode {
    public:
     UCTNode(Move move, UCTNode* parent)
-        : wins_(0),
+        : score_(0.0),
           visits_(0),
           move_(move),
           is_terminal_(false),
@@ -29,14 +29,14 @@ class UCTNode {
         if (visits_ == 0) {
             return 30000000.0;
         }
-        double win_ratio = (wins_ / (double)visits_);
+        double win_ratio = score_ / visits_;
         if (parent_ == nullptr) {
             return win_ratio;
         }
         return win_ratio + std::sqrt(2.0 * std::log(parent_->visits()) / visits_);
     }
-    void increment_wins() {
-        ++wins_;
+    void add_score(const double n) {
+        score_ += n;
     }
     [[nodiscard]] int visits() const {
         return visits_;
@@ -77,7 +77,7 @@ class UCTNode {
     }
 
    private:
-    int wins_;
+    double score_;
     int visits_;
     Move move_;
     bool is_terminal_;
@@ -165,7 +165,7 @@ UCTNode* expand(Position& pos, UCTNode* selected_node) {
     return next_child;
 }
 
-int rollout(Position& forwarded_position, UCTNode* expanded_node) {
+double rollout(Position& forwarded_position, UCTNode* expanded_node) {
     RNGService* rng_service = RNGService::singleton();
     int rollout_ply = 0;
     MoveList move_list = forwarded_position.legal_move_list();
@@ -184,20 +184,18 @@ int rollout(Position& forwarded_position, UCTNode* expanded_node) {
                                      : std::nullopt;
     rewind_position(forwarded_position, rollout_ply + expanded_node->depth());
     if (loser) {
-        return side_to_move == *loser ? 1 : -1;
+        return side_to_move == *loser ? 1.0 : 0.0;
     }
-    return 0;
+    return 0.5;
 }
 
-void backprop(UCTNode* rolled_out_node, int score) {
+void backprop(UCTNode* rolled_out_node, const double score) {
     if (rolled_out_node == nullptr) {
         return;
     }
     rolled_out_node->increment_visits();
-    if (score == 1) {
-        rolled_out_node->increment_wins();
-    }
-    backprop(rolled_out_node->parent(), -1 * score);
+    rolled_out_node->add_score(score);
+    backprop(rolled_out_node->parent(), 1.0 - score);
 }
 
 MoveList get_pv(UCTNode* node, const int max_length = 8) {
@@ -235,7 +233,7 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     while (!search_globals.stop()) {
         UCTNode* selected_node = select(&root);
         UCTNode* expanded_node = expand(pos, selected_node);
-        int score = rollout(pos, expanded_node);
+        double score = rollout(pos, expanded_node);
         backprop(expanded_node, score);
 
         search_globals.increment_nodes();
