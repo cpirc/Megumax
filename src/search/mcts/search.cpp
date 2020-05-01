@@ -20,9 +20,9 @@ class UCTNode {
         : score_(0.0),
           visits_(0),
           move_(move),
-          is_terminal_(false),
           parent_(parent),
           visited_children_(0),
+          total_children_(0),
           children_() {
     }
 
@@ -39,7 +39,7 @@ class UCTNode {
     void add_score(const double n) {
         score_ += n;
     }
-    [[nodiscard]] int visits() const {
+    [[nodiscard]] unsigned visits() const {
         return visits_;
     }
     void increment_visits() {
@@ -47,12 +47,6 @@ class UCTNode {
     }
     [[nodiscard]] const Move& move() const {
         return move_;
-    }
-    [[nodiscard]] bool is_terminal() const {
-        return is_terminal_;
-    }
-    void is_terminal(bool is_terminal) {
-        is_terminal_ = is_terminal;
     }
     [[nodiscard]] UCTNode* parent() const {
         return parent_;
@@ -62,6 +56,12 @@ class UCTNode {
     }
     void increment_visited_children() {
         ++visited_children_;
+    }
+    [[nodiscard]] unsigned int total_children() const {
+        return total_children_;
+    }
+    void total_children(unsigned int total_children) {
+        total_children_ = total_children;
     }
     [[nodiscard]] std::vector<UCTNode>& children() {
         return children_;
@@ -79,11 +79,11 @@ class UCTNode {
 
    private:
     double score_;
-    int visits_;
+    unsigned visits_;
     Move move_;
-    bool is_terminal_;
     UCTNode* parent_;
     unsigned visited_children_;
+    unsigned total_children_;
     std::vector<UCTNode> children_;
 };
 
@@ -129,7 +129,10 @@ unsigned select_best_child_index(std::vector<UCTNode>& children) {
 
 UCTNode* select(UCTNode* node) {
     std::vector<UCTNode>& children = node->children();
-    if (children.empty() || node->visited_children() < children.size()) {
+    if (node->visits() < node->total_children() + 1) {
+        return node;
+    }
+    if (node->total_children() == 0) {
         return node;
     }
 
@@ -138,31 +141,30 @@ UCTNode* select(UCTNode* node) {
 }
 
 UCTNode* expand(Position& pos, UCTNode* selected_node) {
-    std::vector<UCTNode>& children = selected_node->children();
-    if (children.empty()) {
-        forward_position(pos, selected_node);
+    forward_position(pos, selected_node);
 
-        if (selected_node->is_terminal()) {
-            return selected_node;
-        }
-
+    if (selected_node->visits() == 0) {
         MoveList move_list = pos.legal_move_list();
-        if (move_list.empty()) {
-            selected_node->is_terminal(true);
-            return selected_node;
-        }
-
-        children.reserve(move_list.size());
-        for (Move move : move_list) {
-            children.emplace_back(move, selected_node);
-        }
+        selected_node->total_children(move_list.size());
+        return selected_node;
+    } else if (selected_node->total_children() == 0) {
         return selected_node;
     }
 
     unsigned next_child_index = selected_node->visited_children();
+    MoveList move_list = pos.legal_move_list();
+    Move next_move = move_list.values().at(next_child_index);
+
+    std::vector<UCTNode>& children = selected_node->children();
+    children.emplace_back(next_move, selected_node);
+
+    UCTNode* next_child = &children.at(next_child_index);
+    pos.make_move(next_move);
+    MoveList child_move_list = pos.legal_move_list();
+    next_child->total_children(child_move_list.size());
+
     selected_node->increment_visited_children();
-    UCTNode* next_child = &selected_node->children().at(next_child_index);
-    forward_position(pos, next_child);
+
     return next_child;
 }
 
@@ -227,12 +229,6 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     }
 
     UCTNode root{Move{0}, nullptr};
-    MoveList move_list = pos.legal_move_list();
-    std::vector<UCTNode>& children = root.children();
-    children.reserve(move_list.size());
-    for (Move move : move_list) {
-        children.emplace_back(move, &root);
-    }
 
     while (!search_globals.stop()) {
         UCTNode* selected_node = select(&root);
