@@ -23,18 +23,31 @@ class UCTNode {
           is_terminal_(false),
           parent_(parent),
           visited_children_(0),
-          children_() {
+          children_(),
+          probabilities_() {
     }
 
-    [[nodiscard]] double value() const {
-        if (visits_ == 0) {
-            return 30000000.0;
+    [[nodiscard]] double p(const Position& pos) const noexcept {
+        assert(pos.is_legal_move(move_));
+        double score = 0.0;
+
+        // MVV-LVA
+        if (move_.type() == Move::Type::ENPASSANT) {
+            score =
+                (libchess::constants::PAWN.value() + 1) * 10 - libchess::constants::PAWN.value();
+        } else if (pos.is_capture_move(move_)) {
+            const auto victim = pos.piece_on(move_.to_square());
+            const auto aggressor = pos.piece_on(move_.from_square());
+            score = (victim.value().type().value() + 1) * 10 - aggressor.value().type().value();
+        } else {
+            score = 0.0;
         }
-        double win_ratio = score_ / visits_;
-        if (parent_ == nullptr) {
-            return win_ratio;
-        }
-        return win_ratio + std::sqrt(2.0 * std::log(parent_->visits()) / visits_);
+
+        assert(score >= 0.0);
+        return score;
+    }
+    [[nodiscard]] double score() const {
+        return score_;
     }
     void add_score(const double n) {
         score_ += n;
@@ -66,6 +79,9 @@ class UCTNode {
     [[nodiscard]] std::vector<UCTNode>& children() {
         return children_;
     }
+    [[nodiscard]] const std::vector<UCTNode>& children() const noexcept {
+        return children_;
+    }
 
     [[nodiscard]] int depth() const {
         const UCTNode* iter = this;
@@ -77,6 +93,69 @@ class UCTNode {
         return ply;
     }
 
+    [[nodiscard]] double child_probability(const std::size_t idx) const noexcept {
+        return probabilities_.at(idx);
+    }
+
+    [[nodiscard]] double child_score(const std::size_t idx) const noexcept {
+        assert(idx < children_.size());
+        assert(idx < probabilities_.size());
+        assert(children_.size() == probabilities_.size());
+        assert(0.0 <= child_probability(idx) && child_probability(idx) <= 1.0);
+        assert(visits() > 0);
+
+        const auto& child = children_.at(idx);
+
+        if (child.visits() == 0) {
+            return 30000000.0;
+        }
+
+        const double c_puct = 4.0;
+        const double Q = child.score() / child.visits();
+        const double U =
+            c_puct * child_probability(idx) * std::sqrt(visits() - 1) / (child.visits() + 1);
+        return Q + U;
+    }
+
+    void create_children(const Position& pos, const MoveList& move_list) noexcept {
+        children_.reserve(move_list.size());
+        probabilities_.reserve(move_list.size());
+
+        double sum = 0.0;
+        for (const Move& move : move_list.values()) {
+            assert(pos.is_legal_move(move));
+
+            children_.emplace_back(move, this);
+
+            const double score = children_.back().p(pos);
+            assert(score >= 0.0);
+            sum += score;
+
+            probabilities_.push_back(score);
+        }
+
+        // Softmax
+        for (auto& prob : probabilities_) {
+            if (sum == 0.0) {
+                prob = 1.0 / move_list.size();
+            } else {
+                prob = prob / sum;
+            }
+            if (prob > 1.0) {
+                std::cout << prob << std::endl;
+            }
+            assert(0.0 <= prob && prob <= 1.0);
+        }
+
+#ifndef NDEBUG
+        double nsum = 0.0;
+        for (auto& prob : probabilities_) {
+            nsum += prob;
+        }
+        assert(std::abs(nsum - 1.0) <= 0.001);
+#endif
+    }
+
    private:
     double score_;
     int visits_;
@@ -85,6 +164,7 @@ class UCTNode {
     UCTNode* parent_;
     unsigned visited_children_;
     std::vector<UCTNode> children_;
+    std::vector<double> probabilities_;
 };
 
 void forward_position(Position& pos, UCTNode* node) {
@@ -117,31 +197,31 @@ unsigned select_most_visited_child_index(std::vector<UCTNode>& children) {
     return most_visited_node_index;
 }
 
-unsigned select_best_child_index(std::vector<UCTNode>& children) {
+unsigned select_best_child_index(const UCTNode* node) {
     unsigned best_node_index = 0;
-    for (unsigned i = 1; i < children.size(); ++i) {
-        if (children.at(i).value() > children.at(best_node_index).value()) {
+    for (unsigned i = 1; i < node->children().size(); ++i) {
+        if (node->child_score(i) > node->child_score(best_node_index)) {
             best_node_index = i;
         }
     }
     return best_node_index;
 }
 
-UCTNode* select(UCTNode* node) {
+UCTNode* select(Position& pos, UCTNode* node) {
     std::vector<UCTNode>& children = node->children();
     if (children.empty() || node->visited_children() < children.size()) {
         return node;
     }
 
-    unsigned best_child_index = select_best_child_index(node->children());
-    return select(&children.at(best_child_index));
+    unsigned best_child_index = select_best_child_index(node);
+    assert(pos.is_legal_move(children.at(best_child_index).move()));
+    pos.make_move(children.at(best_child_index).move());
+    return select(pos, &children.at(best_child_index));
 }
 
 UCTNode* expand(Position& pos, UCTNode* selected_node) {
     std::vector<UCTNode>& children = selected_node->children();
     if (children.empty()) {
-        forward_position(pos, selected_node);
-
         if (selected_node->is_terminal()) {
             return selected_node;
         }
@@ -152,17 +232,16 @@ UCTNode* expand(Position& pos, UCTNode* selected_node) {
             return selected_node;
         }
 
-        children.reserve(move_list.size());
-        for (Move move : move_list) {
-            children.emplace_back(move, selected_node);
-        }
+        selected_node->create_children(pos, move_list);
+
         return selected_node;
     }
 
     unsigned next_child_index = selected_node->visited_children();
     selected_node->increment_visited_children();
     UCTNode* next_child = &selected_node->children().at(next_child_index);
-    forward_position(pos, next_child);
+    assert(pos.is_legal_move(next_child->move()));
+    pos.make_move(next_child->move());
     return next_child;
 }
 
@@ -227,18 +306,18 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     }
 
     UCTNode root{Move{0}, nullptr};
-    MoveList move_list = pos.legal_move_list();
-    std::vector<UCTNode>& children = root.children();
-    children.reserve(move_list.size());
-    for (Move move : move_list) {
-        children.emplace_back(move, &root);
-    }
+
+#ifndef NDEBUG
+    const auto original_hash = pos.hash();
+#endif
 
     while (!search_globals.stop()) {
-        UCTNode* selected_node = select(&root);
+        UCTNode* selected_node = select(pos, &root);
         UCTNode* expanded_node = expand(pos, selected_node);
         double score = rollout(pos, expanded_node);
         backprop(expanded_node, score);
+
+        assert(pos.hash() == original_hash);
 
         search_globals.increment_nodes();
 
@@ -251,7 +330,7 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
                 std::uint64_t time_ms = time_diff.count();
                 std::uint64_t nodes = search_globals.nodes();
                 std::cout << "info";
-                std::cout << " score cp " << root.value();
+                // std::cout << " score cp " << root.value(pos);
                 std::cout << " nodes " << nodes;
                 std::cout << " time " << time_ms;
                 std::cout << " nps " << (time_ms ? (nodes * 1000 / time_ms) : nodes);
