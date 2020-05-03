@@ -13,23 +13,9 @@ UCTNode::UCTNode(libchess::Move move, UCTNode* parent)
       probabilities_() {
 }
 
-double UCTNode::p(const libchess::Position& pos) const noexcept {
+double UCTNode::p(libchess::Position& pos) const noexcept {
     assert(pos.is_legal_move(move_));
-    double score = 0.0;
-
-    // MVV-LVA
-    if (move_.type() == libchess::Move::Type::ENPASSANT) {
-        score = (libchess::constants::PAWN.value() + 1) * 10 - libchess::constants::PAWN.value();
-    } else if (pos.is_capture_move(move_)) {
-        const auto victim = pos.piece_on(move_.to_square());
-        const auto aggressor = pos.piece_on(move_.from_square());
-        score = (victim.value().type().value() + 1) * 10 - aggressor.value().type().value();
-    } else {
-        score = 0.0;
-    }
-
-    assert(score >= 0.0);
-    return score;
+    return pos.see_for(move_, {100, 300, 310, 500, 900, 20000});
 }
 
 double UCTNode::score() const {
@@ -114,7 +100,7 @@ double UCTNode::child_score(std::size_t idx) const noexcept {
     return Q + U;
 }
 
-void UCTNode::create_children(const libchess::Position& pos,
+void UCTNode::create_children(libchess::Position& pos,
                               const libchess::MoveList& move_list) noexcept {
     children_.reserve(move_list.size());
     probabilities_.reserve(move_list.size());
@@ -139,18 +125,15 @@ void UCTNode::create_children(const libchess::Position& pos,
         } else {
             prob = prob / sum;
         }
-        if (prob > 1.0) {
-            std::cout << prob << std::endl;
-        }
         assert(0.0 <= prob && prob <= 1.0);
     }
 
 #ifndef NDEBUG
     double nsum = 0.0;
-        for (auto& prob : probabilities_) {
-            nsum += prob;
-        }
-        assert(std::abs(nsum - 1.0) <= 0.001);
+    for (auto& prob : probabilities_) {
+        nsum += prob;
+    }
+    assert(std::abs(nsum - 1.0) <= 0.001);
 #endif
 }
 

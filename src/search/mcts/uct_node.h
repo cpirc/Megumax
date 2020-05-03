@@ -12,9 +12,9 @@ class UCTNode {
    public:
     UCTNode(libchess::Move move, UCTNode* parent);
 
-    [[nodiscard]] double p(const libchess::Position& pos) const noexcept;
+    [[nodiscard]] double p(libchess::Position& pos) const noexcept;
     [[nodiscard]] double score() const;
-    void add_score(const double n);
+    void add_score(double n);
     [[nodiscard]] int visits() const;
     void increment_visits();
     [[nodiscard]] const libchess::Move& move() const;
@@ -28,12 +28,11 @@ class UCTNode {
 
     [[nodiscard]] int depth() const;
 
-    [[nodiscard]] double child_probability(const std::size_t idx) const noexcept;
+    [[nodiscard]] double child_probability(std::size_t idx) const noexcept;
 
-    [[nodiscard]] double child_score(const std::size_t idx) const noexcept;
+    [[nodiscard]] double child_score(std::size_t idx) const noexcept;
 
-    void create_children(const libchess::Position& pos,
-                         const libchess::MoveList& move_list) noexcept;
+    void create_children(libchess::Position& pos, const libchess::MoveList& move_list) noexcept;
 
    private:
     double score_;
