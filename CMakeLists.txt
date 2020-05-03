@@ -43,5 +43,5 @@ add_executable(
     src/search/mcts/search.cpp
     src/search_globals.cpp
     src/rng_service.cpp
-)
+    src/search/mcts/uct_node.cpp)
 target_link_libraries(megumax Threads::Threads)

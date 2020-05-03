@@ -1,5 +1,5 @@
-#ifndef MEGUMAX_SEARCH_H
-#define MEGUMAX_SEARCH_H
+#ifndef MEGUMAX_MCTS_SEARCH_H
+#define MEGUMAX_MCTS_SEARCH_H
 
 #include "search_globals.h"
 
@@ -9,4 +9,4 @@ std::optional<libchess::Move> search(libchess::Position& pos, SearchGlobals& sea
 
 }  // namespace megumax
 
-#endif  // MEGUMAX_SEARCH_H
+#endif  // MEGUMAX_MCTS_SEARCH_H
