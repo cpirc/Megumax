@@ -141,6 +141,25 @@ MoveList get_pv(UCTNode* node, const int max_length = 8) {
     return move_list;
 }
 
+bool legal_pv(Position& pos, MoveList&& move_list) {
+    int ply = 0;
+
+    for (const auto& move : move_list) {
+        if (pos.is_legal_move(move)) {
+            pos.make_move(move);
+            ply++;
+        } else {
+            break;
+        }
+    }
+
+    for (int i = 0; i < ply; ++i) {
+        pos.unmake_move();
+    }
+
+    return ply == move_list.size();
+}
+
 std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     search_globals.stop_flag(false);
     search_globals.side_to_move(pos.side_to_move());
@@ -166,6 +185,7 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
         backprop(expanded_node, score);
 
         assert(pos.hash() == original_hash);
+        assert(legal_pv(pos, get_pv(&root)));
 
         search_globals.increment_nodes();
 
