@@ -2,6 +2,7 @@
 
 #include <libchess/UCIService.h>
 
+#include "alphabeta.h"
 #include "eval.h"
 #include "rng_service.h"
 #include "search.h"
@@ -110,7 +111,7 @@ double rollout(Position& forwarded_position, UCTNode* expanded_node) {
             score = 0.0;
             break;
         case Position::GameState::IN_PROGRESS:
-            score = sigmoid(0.1 * eval(forwarded_position));
+            score = sigmoid(0.1 * alphabeta(forwarded_position, -9999999, 9999999, 1));
             break;
         default:
             abort();
