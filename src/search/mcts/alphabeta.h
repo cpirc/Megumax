@@ -7,13 +7,19 @@
 namespace megumax {
 
 int alphabeta(libchess::Position& pos, int alpha, const int beta, int depth) {
+    const bool in_check = pos.in_check();
+
+    // Check extensions
+    if (in_check) {
+        depth++;
+    }
+
     if (depth == 0) {
         return eval(pos);
     }
 
     auto move_list = pos.legal_move_list();
     int best_score = std::numeric_limits<int>::min();
-    const bool in_check = pos.in_check();
 
     // Checkmate or stalemate
     if (move_list.size() == 0) {
