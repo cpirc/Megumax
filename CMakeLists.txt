@@ -40,6 +40,7 @@ add_executable(
     megumax
     src/main.cpp
     src/search/mcts/eval.cpp
+    src/search/mcts/pst.cpp
     src/search/mcts/search.cpp
     src/search_globals.cpp
     src/rng_service.cpp
