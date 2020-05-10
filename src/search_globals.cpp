@@ -11,11 +11,23 @@ SearchGlobals SearchGlobals::new_search_globals(
 SearchGlobals::SearchGlobals(std::uint64_t nodes,
                              std::optional<std::chrono::milliseconds> start_time,
                              std::optional<libchess::UCIGoParameters> go_parameters) noexcept
-    : side_to_move_(libchess::constants::WHITE),
+    : debug_mutex(),
+      debug_cv(),
+      side_to_move_(libchess::constants::WHITE),
+      searching_(false),
       stop_flag_(false),
       nodes_(nodes),
       start_time_(start_time),
-      go_parameters_(std::move(go_parameters)) {
+      go_parameters_(std::move(go_parameters)),
+      debug_(false) {
+}
+
+bool SearchGlobals::searching() const noexcept {
+    return searching_;
+}
+
+bool SearchGlobals::debug() const noexcept {
+    return debug_;
 }
 
 std::uint64_t SearchGlobals::nodes() const noexcept {
@@ -36,6 +48,14 @@ void SearchGlobals::start_time(std::chrono::milliseconds start_time) noexcept {
 
 void SearchGlobals::go_parameters(const libchess::UCIGoParameters& go_parameters) noexcept {
     go_parameters_ = go_parameters;
+}
+
+void SearchGlobals::searching(bool searching) noexcept {
+    searching_ = searching;
+}
+
+void SearchGlobals::debug(bool debug) noexcept {
+    debug_ = debug;
 }
 
 void SearchGlobals::stop_flag(bool stop_flag) noexcept {

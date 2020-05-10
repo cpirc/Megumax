@@ -1,4 +1,6 @@
+#include <optional>
 #include <stack>
+#include <string>
 
 #include <libchess/UCIService.h>
 
@@ -160,6 +162,26 @@ bool legal_pv(Position& pos, MoveList&& move_list) {
     return ply == move_list.size();
 }
 
+void stats(Position& pos, UCTNode* node) {
+    forward_position(pos, node);
+
+    pos.display();
+    UCTNode* parent = node->parent();
+    std::cout << "depth: " << node->depth() << "\n"
+              << "visits: " << node->visits() << "\n"
+              << "score: " << node->score() << "\n"
+              << "P: " << node->p(pos) << "\n"
+              << "Q: " << node->score() / node->visits() << "\n";
+    if (parent != nullptr) {
+        auto parent_relative_idx = node - parent->children().data();
+        std::cout << "U: " << parent->child_probability(parent_relative_idx) << "\n";
+    }
+    bool is_expanded = (!node->is_terminal() && !node->children().empty());
+    std::cout << "expanded: " << std::to_string(is_expanded) << "\n";
+
+    rewind_position(pos, node->depth());
+}
+
 std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     search_globals.stop_flag(false);
     search_globals.side_to_move(pos.side_to_move());
@@ -179,6 +201,76 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
 #endif
 
     while (!search_globals.stop()) {
+        if (search_globals.debug()) {
+            std::string line;
+            UCTNode* selected_node = &root;
+            std::cout << "Debug mode activated, selected node is root.\n";
+            while (true) {
+                stats(pos, selected_node);
+                std::getline(std::cin, line);
+                if (line == "moves" || line == "children" || line == "ls") {
+                    if (selected_node->is_terminal()) {
+                        std::cout << "Selected node is terminal!\n";
+                        continue;
+                    } else if (selected_node->children().empty()) {
+                        std::cout << "Selected node is not yet expanded!\n";
+                        continue;
+                    }
+                    for (unsigned i = 0; i < selected_node->children().size(); ++i) {
+                        UCTNode& child = selected_node->children().at(i);
+                        // clang-format off
+                        std::cout << "move " << child.move().to_str()
+                                  << " visits " << child.visits()
+                                  << " score " << child.score()
+                                  << " prior_probability " << selected_node->child_probability(i)
+                                  << "\n";
+                        // clang-format on
+                    }
+                } else if (line.find("child", 0) != std::string::npos) {
+                    if (selected_node->is_terminal()) {
+                        std::cout << "Selected node is terminal!\n";
+                        continue;
+                    } else if (selected_node->children().empty()) {
+                        std::cout << "Selected node is not yet expanded!\n";
+                        continue;
+                    }
+                    auto move_start_pos = line.find(' ', 0) + 1;
+                    std::string move_str = line.substr(move_start_pos);
+                    std::optional<Move> move = Move::from(move_str);
+                    if (!move) {
+                        std::cout << move_str << " is not a valid move format!\n";
+                    }
+                    auto& children = selected_node->children();
+                    int found_idx = -1;
+                    for (unsigned i = 0; i < children.size(); ++i) {
+                        if (children.at(i).move() == *move) {
+                            found_idx = (int)i;
+                            break;
+                        }
+                    }
+                    if (found_idx == -1) {
+                        std::cout << move_str << " is not a legal move in the current position!\n";
+                        break;
+                    }
+                    selected_node = children.data() + found_idx;
+                } else if (line == "parent") {
+                    UCTNode* parent = selected_node->parent();
+                    if (parent == nullptr) {
+                        std::cout << "Selected node is root!\n";
+                        continue;
+                    }
+                    selected_node = parent;
+                } else if (line == "step" || line == "s") {
+                    break;
+                } else if (line == "ndebug" || line == "quit" || line == "stop") {
+                    std::lock_guard<std::mutex> debug_lock(search_globals.debug_mutex);
+                    search_globals.debug(false);
+                    search_globals.debug_cv.notify_all();
+                    break;
+                }
+            }
+        }
+
         UCTNode* selected_node = select(pos, &root);
         UCTNode* expanded_node = expand(pos, selected_node);
         double score = rollout(pos, expanded_node);
