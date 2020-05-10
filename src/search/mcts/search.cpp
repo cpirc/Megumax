@@ -200,8 +200,18 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
     const auto original_hash = pos.hash();
 #endif
 
+    int debug_steps = 0;
     while (!search_globals.stop()) {
-        if (search_globals.debug()) {
+        do {
+            if (!search_globals.debug()) {
+                break;
+            }
+            if (debug_steps > 0) {
+                --debug_steps;
+                if (debug_steps > 0) {
+                    break;
+                }
+            }
             std::string line;
             UCTNode* selected_node = &root;
             std::cout << "Debug mode activated, selected node is root.\n";
@@ -234,11 +244,16 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
                         std::cout << "Selected node is not yet expanded!\n";
                         continue;
                     }
-                    auto move_start_pos = line.find(' ', 0) + 1;
-                    std::string move_str = line.substr(move_start_pos);
+                    auto move_start_pos = line.find(' ');
+                    if (move_start_pos == std::string::npos) {
+                        std::cout << line << " is not a valid move command!\n";
+                        continue;
+                    }
+                    std::string move_str = line.substr(move_start_pos + 1);
                     std::optional<Move> move = Move::from(move_str);
                     if (!move) {
                         std::cout << move_str << " is not a valid move format!\n";
+                        continue;
                     }
                     auto& children = selected_node->children();
                     int found_idx = -1;
@@ -260,7 +275,15 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
                         continue;
                     }
                     selected_node = parent;
-                } else if (line == "step" || line == "s") {
+                } else if (line == "step" || line == "s" ||
+                           line.find("steps") != std::string::npos) {
+                    auto debug_steps_pos = line.find(' ');
+                    if (debug_steps_pos == std::string::npos) {
+                        debug_steps = 1;
+                    } else {
+                        std::string debug_steps_str = line.substr(debug_steps_pos + 1);
+                        debug_steps = std::stoi(debug_steps_str);
+                    }
                     break;
                 } else if (line == "ndebug" || line == "quit" || line == "stop") {
                     std::lock_guard<std::mutex> debug_lock(search_globals.debug_mutex);
@@ -269,7 +292,7 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
                     break;
                 }
             }
-        }
+        } while (false);
 
         UCTNode* selected_node = select(pos, &root);
         UCTNode* expanded_node = expand(pos, selected_node);
