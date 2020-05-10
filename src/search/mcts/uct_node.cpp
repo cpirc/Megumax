@@ -15,7 +15,7 @@ UCTNode::UCTNode(libchess::Move move, UCTNode* parent)
 
 double UCTNode::p(libchess::Position& pos) const noexcept {
     assert(pos.is_legal_move(move_));
-    return pos.see_for(move_, {100, 300, 310, 500, 900, 20000});
+    return pos.see_for(move_, {100, 300, 310, 500, 900, 20000}) / 50.0;
 }
 
 double UCTNode::score() const {
@@ -111,8 +111,14 @@ void UCTNode::create_children(libchess::Position& pos,
 
         children_.emplace_back(move, this);
 
-        const double score = children_.back().p(pos);
+        double score = children_.back().p(pos);
+        if (score >= 30) {
+            score = 1.0;
+        } else {
+            score = std::exp(score);
+        }
         assert(score >= 0.0);
+        assert(!std::isnan(score));
         sum += score;
 
         probabilities_.push_back(score);
