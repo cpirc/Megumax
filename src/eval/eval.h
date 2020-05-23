@@ -1,5 +1,5 @@
-#ifndef SEARCH_MCTS_H
-#define SEARCH_MCTS_H
+#ifndef MEGUMAX_EVAL_EVAL_H
+#define MEGUMAX_EVAL_EVAL_H
 
 #include <libchess/Position.h>
 
@@ -9,4 +9,4 @@ int eval(const libchess::Position& pos);
 
 }  // namespace megumax
 
-#endif
+#endif  // MEGUMAX_EVAL_EVAL_H

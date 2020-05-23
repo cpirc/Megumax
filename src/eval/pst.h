@@ -1,5 +1,5 @@
-#ifndef MEGUMAX_SEARCH_MCTS_PST_H
-#define MEGUMAX_SEARCH_MCTS_PST_H
+#ifndef MEGUMAX_EVAL_PST_H
+#define MEGUMAX_EVAL_PST_H
 
 #include <optional>
 
@@ -13,4 +13,4 @@ int pst_eg(libchess::PieceType pt, libchess::Square sq);
 
 }  // namespace megumax
 
-#endif
+#endif  // MEGUMAX_EVAL_PST_H
