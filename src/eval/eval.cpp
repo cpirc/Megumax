@@ -13,17 +13,12 @@ namespace megumax {
 
 constexpr int piece_values[] = {100, 300, 325, 500, 900, 100000};
 
-int count_piece(const Position& pos, const PieceType pt) {
-    return pos.piece_type_bb(pt, constants::WHITE).popcount() +
-           pos.piece_type_bb(pt, constants::BLACK).popcount();
-}
-
 int phase(const Position& pos) {
     int phase = 24;
-    phase -= count_piece(pos, constants::KNIGHT);
-    phase -= count_piece(pos, constants::BISHOP);
-    phase -= 2 * count_piece(pos, constants::ROOK);
-    phase -= 4 * count_piece(pos, constants::QUEEN);
+    phase -= pos.piece_type_bb(constants::KNIGHT).popcount();
+    phase -= pos.piece_type_bb(constants::BISHOP).popcount();
+    phase -= 2 * pos.piece_type_bb(constants::ROOK).popcount();
+    phase -= 4 * pos.piece_type_bb(constants::QUEEN).popcount();
     return (phase * 256 + 12) / 24;
 }
 
