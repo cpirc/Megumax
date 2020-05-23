@@ -226,13 +226,22 @@ std::optional<Move> search(Position& pos, SearchGlobals& search_globals) {
                         std::cout << "Selected node is not yet expanded!\n";
                         continue;
                     }
-                    for (unsigned i = 0; i < selected_node->children().size(); ++i) {
-                        UCTNode& child = selected_node->children().at(i);
+                    std::vector<const UCTNode*> children_tmp;
+                    for (const UCTNode& uct_node : selected_node->children()) {
+                        children_tmp.push_back(&uct_node);
+                    }
+                    std::sort(children_tmp.begin(),
+                              children_tmp.end(),
+                              [](const UCTNode* left, const UCTNode* right) {
+                                  return left->score() > right->score();
+                              });
+                    for (const UCTNode* child : children_tmp) {
+                        std::size_t child_index = child - selected_node->children().data();
                         // clang-format off
-                        std::cout << "move " << child.move().to_str()
-                                  << " visits " << child.visits()
-                                  << " score " << child.score()
-                                  << " prior_probability " << selected_node->child_probability(i)
+                        std::cout << "move " << child->move().to_str()
+                                  << " visits " << child->visits()
+                                  << " score " << child->score()
+                                  << " prior_probability " << selected_node->child_probability(child_index)
                                   << "\n";
                         // clang-format on
                     }
