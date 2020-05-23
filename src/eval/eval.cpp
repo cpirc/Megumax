@@ -11,8 +11,6 @@ namespace constants = libchess::constants;
 
 namespace megumax {
 
-constexpr int piece_values[] = {100, 300, 325, 500, 900, 100000};
-
 int phase(const Position& pos) {
     int phase = 24;
     phase -= pos.piece_type_bb(constants::KNIGHT).popcount();
@@ -39,13 +37,8 @@ int eval(const Position& pos) {
                 piece_bb.forward_popbit();
 
                 // PST
-                if (color == constants::WHITE) {
-                    mg_score += pst_mg(piece_type, piece_sq);
-                    eg_score += pst_eg(piece_type, piece_sq);
-                } else {
-                    mg_score += pst_mg(piece_type, piece_sq.flipped());
-                    eg_score += pst_eg(piece_type, piece_sq.flipped());
-                }
+                mg_score += pst_mg(piece_type, color, piece_sq);
+                eg_score += pst_eg(piece_type, color, piece_sq);
             }
         }
 

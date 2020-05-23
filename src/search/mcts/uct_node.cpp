@@ -1,4 +1,6 @@
 #include "uct_node.h"
+#include "eval/eval.h"
+#include "eval/pst.h"
 
 namespace megumax {
 
@@ -15,7 +17,7 @@ UCTNode::UCTNode(libchess::Move move, UCTNode* parent)
 
 double UCTNode::p(libchess::Position& pos) const noexcept {
     assert(pos.is_legal_move(move_));
-    return pos.see_for(move_, {100, 300, 310, 500, 900, 20000}) / 50.0;
+    return pos.see_for(move_, piece_values) / 50.0;
 }
 
 double UCTNode::score() const {

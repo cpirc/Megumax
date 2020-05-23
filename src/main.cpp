@@ -3,6 +3,7 @@
 #include "libchess/Position.h"
 #include "libchess/UCIService.h"
 
+#include "eval/eval.h"
 #include "search/mcts/search.h"
 
 using libchess::Move;
@@ -64,6 +65,9 @@ int main() {
         }
     };
     auto display_handler = [&position](const std::istringstream&) { position.display(); };
+    auto eval_handler = [&position](const std::istringstream&) {
+        std::cout << "info string eval cp " << megumax::eval(position) << std::endl;
+    };
 
     UCIService uci_service{"Megumax", "##chessprogramming Freenode IRC"};
     uci_service.register_position_handler(position_handler);
@@ -71,6 +75,7 @@ int main() {
     uci_service.register_stop_handler(stop_handler);
     uci_service.register_handler("debug", debug_handler);
     uci_service.register_handler("d", display_handler);
+    uci_service.register_handler("eval", eval_handler);
 
     std::string line;
     while (true) {
