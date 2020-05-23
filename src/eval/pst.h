@@ -8,8 +8,8 @@
 
 namespace megumax {
 
-int pst_mg(const libchess::PieceType pt, const libchess::Square sq);
-int pst_eg(const libchess::PieceType pt, const libchess::Square sq);
+int pst_mg(libchess::PieceType pt, libchess::Square sq);
+int pst_eg(libchess::PieceType pt, libchess::Square sq);
 
 }  // namespace megumax
 

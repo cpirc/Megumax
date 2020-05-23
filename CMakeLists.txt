@@ -39,10 +39,11 @@ endif ()
 add_executable(
     megumax
     src/main.cpp
-    src/search/mcts/eval.cpp
-    src/search/mcts/pst.cpp
-    src/search/mcts/search.cpp
     src/search_globals.cpp
     src/rng_service.cpp
-    src/search/mcts/uct_node.cpp)
+    src/eval/eval.cpp
+    src/eval/pst.cpp
+    src/search/mcts/search.cpp
+    src/search/mcts/uct_node.cpp
+)
 target_link_libraries(megumax Threads::Threads)

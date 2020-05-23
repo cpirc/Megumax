@@ -4,7 +4,7 @@
 
 #include <libchess/UCIService.h>
 
-#include "eval.h"
+#include "eval/eval.h"
 #include "rng_service.h"
 #include "search.h"
 #include "uct_node.h"
