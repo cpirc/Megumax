@@ -34,14 +34,14 @@ int eval(const Position& pos) {
 
     for (Color color : constants::COLORS) {
         for (PieceType piece_type : constants::PIECE_TYPES) {
-            Bitboard piece_type_bb = pos.piece_type_bb(piece_type, color);
+            Bitboard piece_bb = pos.piece_type_bb(piece_type, color);
 
             // Material
-            score += piece_values[piece_type.value()] * piece_type_bb.popcount();
+            score += piece_values[piece_type.value()] * piece_bb.popcount();
 
-            while (piece_type_bb) {
-                Square piece_sq = piece_type_bb.forward_bitscan();
-                piece_type_bb.forward_popbit();
+            while (piece_bb) {
+                Square piece_sq = piece_bb.forward_bitscan();
+                piece_bb.forward_popbit();
 
                 // PST
                 if (color == constants::WHITE) {
