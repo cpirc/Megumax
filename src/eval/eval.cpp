@@ -1,4 +1,5 @@
 #include "eval.h"
+#include "masks.h"
 #include "pst.h"
 
 using libchess::Bitboard;
@@ -10,6 +11,14 @@ using libchess::Square;
 namespace constants = libchess::constants;
 
 namespace megumax {
+
+constexpr int MG = 0;
+constexpr int EG = 1;
+
+constexpr std::array<std::array<std::array<int, 7>, 2>, 2> passed_pawn_values{{
+    {{{0, 5, 10, 20, 30, 50, 100}, {0, 5, 10, 20, 40, 70, 120}}},
+    {{{100, 50, 30, 20, 10, 5, 0}, {120, 70, 40, 20, 10, 5, 0}}},
+}};
 
 int phase(const Position& pos) {
     int phase = 24;
@@ -25,7 +34,11 @@ int eval(const Position& pos) {
     int mg_score = 0;
     int eg_score = 0;
 
+    Bitboard pawn_bb[2];
+
     for (Color color : constants::COLORS) {
+        pawn_bb[color] = pos.piece_type_bb(constants::PAWN, color);
+
         for (PieceType piece_type : constants::PIECE_TYPES) {
             Bitboard piece_bb = pos.piece_type_bb(piece_type, color);
 
@@ -43,6 +56,23 @@ int eval(const Position& pos) {
         }
 
         score = -score;
+        mg_score = -mg_score;
+        eg_score = -eg_score;
+    }
+
+    for (Color color : constants::COLORS) {
+        Bitboard bb = pawn_bb[color];
+        while (bb) {
+            Square sq = bb.forward_bitscan();
+            bb.forward_popbit();
+
+            bool is_passed = !(passed_pawn_mask(sq, color) & pawn_bb[!color]);
+            if (is_passed) {
+                mg_score += passed_pawn_values[color][MG][sq.rank()];
+                eg_score += passed_pawn_values[color][EG][sq.rank()];
+            }
+        }
+
         mg_score = -mg_score;
         eg_score = -eg_score;
     }
